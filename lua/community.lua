@@ -7,7 +7,7 @@ return {
   "AstroNvim/astrocommunity",
   { import = "astrocommunity.pack.lua" },
   { import = "astrocommunity.completion.copilot-cmp", enabled = true },
-  { import = "astrocommunity.pack.python" },
+  -- { import = "astrocommunity.pack.python" },
   { import = "astrocommunity.pack.svelte" },
   { import = "astrocommunity.pack.terraform" },
   { import = "astrocommunity.pack.yaml" },
@@ -17,6 +17,7 @@ return {
   { import = "astrocommunity.pack.markdown" },
   { import = "astrocommunity.pack.bash" },
   { import = "astrocommunity.pack.docker" },
+  { import = "astrocommunity.pack.helm" },
 
   -- { import = "astrocommunity.debugging.nvim-chainsaw", enabled = true },
   { import = "astrocommunity.debugging.nvim-dap-repl-highlights", enabled = true },
@@ -68,4 +69,6 @@ return {
   { import = "astrocommunity.docker.lazydocker" },
   { import = "astrocommunity.editing-support.neogen" },
   -- import/override with your plugins folder
+
+  { import = "astrocommunity.code-runner.molten-nvim" },
 }
