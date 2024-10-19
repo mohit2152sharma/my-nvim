@@ -15,7 +15,7 @@ return {
         maps.n[prefix .. "t"] = { function() require("chainsaw").timeLog() end, desc = "Wrap within time logs" }
         maps.n[prefix .. "y"] = { function() require("chainsaw").typeLog() end, desc = "Type of" }
         maps.n[prefix .. "c"] =
-          { function() require("chainsaw").removeLogs() end, desc = "Remove all logs by chainsaw" }
+        { function() require("chainsaw").removeLogs() end, desc = "Remove all logs by chainsaw" }
       end,
     },
   },
