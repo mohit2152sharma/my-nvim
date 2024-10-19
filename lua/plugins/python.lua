@@ -4,6 +4,10 @@ return {
     optional = true,
     ---@type AstroLSPOpts
     opts = {
+      formatting = {
+        format_on_save = false,
+        -- formatting_options = {},
+      },
       ---@diagnostic disable: missing-fields
       config = {
         basedpyright = {
@@ -129,23 +133,23 @@ return {
   },
   {
     "stevearc/conform.nvim",
-    -- event = { "BufWritePre", "BufRead" },
-    optional = true,
-    -- cmd = { "Conform" },
+    event = { "BufWritePre", "BufRead" },
+    optional = false,
+    cmd = { "Conform" },
     opts = {
-      -- format_on_save = true,
+      format_on_save = true,
       -- default_format_opts = { lsp_format = "fallback" },
       formatters_by_ft = {
         python = { "isort", "black", "autoflake" },
       },
-      -- formatters = {
-      --   isort = {
-      --     args = { "--profile", "black" },
-      --   },
-      --   autoflake = {
-      --     args = { "--remove-all-unused-imports", "--in-place", "--ignore-init-module-imports" },
-      --   },
-      -- },
+      formatters = {
+        isort = {
+          prepend_args = { "--profile", "black" },
+        },
+        autoflake = {
+          prepent_args = { "--remove-all-unused-imports", "--in-place", "--ignore-init-module-imports" },
+        },
+      },
     },
   },
 }
