@@ -5,19 +5,20 @@
 ---@type LazySpec
 return {
   "AstroNvim/astrocommunity",
-  { import = "astrocommunity.pack.lua" },
-  { import = "astrocommunity.completion.codeium-nvim", enabled = true },
+  { import = "astrocommunity.pack.lua", enable = true },
+  -- { import = "astrocommunity.completion.codeium-nvim", enabled = true },
   -- { import = "astrocommunity.pack.python" },
-  { import = "astrocommunity.pack.svelte" },
-  { import = "astrocommunity.pack.terraform" },
-  { import = "astrocommunity.pack.yaml" },
-  { import = "astrocommunity.pack.typescript-all-in-one" },
-  { import = "astrocommunity.pack.sql" },
-  { import = "astrocommunity.pack.markdown" },
-  { import = "astrocommunity.pack.markdown" },
-  { import = "astrocommunity.pack.bash" },
-  { import = "astrocommunity.pack.docker" },
-  { import = "astrocommunity.pack.helm" },
+  { import = "astrocommunity.pack.svelte", enabled = true },
+  { import = "astrocommunity.pack.terraform", enable = true },
+  { import = "astrocommunity.pack.yaml", enable = true },
+  --NOTE: Not loading the pack because it doesn't include svelte type in formatter
+  -- { import = "astrocommunity.pack.typescript", enabled = true },
+  { import = "astrocommunity.pack.sql", enable = true },
+  { import = "astrocommunity.pack.markdown", enable = true },
+  { import = "astrocommunity.pack.markdown", enable = true },
+  { import = "astrocommunity.pack.bash", enable = true },
+  { import = "astrocommunity.pack.docker", enable = true },
+  { import = "astrocommunity.pack.helm", enable = true },
 
   -- { import = "astrocommunity.debugging.nvim-chainsaw", enabled = true },
   { import = "astrocommunity.debugging.nvim-dap-repl-highlights", enabled = true },
@@ -77,5 +78,6 @@ return {
   { import = "astrocommunity.terminal-integration.toggleterm-manager-nvim" },
   {
     import = "astrocommunity.terminal-integration.vim-tpipeline",
+    enabled = true,
   },
 }
