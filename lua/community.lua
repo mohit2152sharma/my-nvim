@@ -44,7 +44,7 @@ return {
   { import = "astrocommunity.motion.vim-matchup", enabled = true },
   -- { import = "astrocommunity.motion.leap-nvim", enabled = true },
 
-  { import = "astrocommunity.markdown-and-latex.markview-nvim" },
+  -- { import = "astrocommunity.markdown-and-latex.markview-nvim" },
 
   { import = "astrocommunity.indent.indent-rainbowline", enabled = true },
   { import = "astrocommunity.indent.indent-tools-nvim", enabled = true },
@@ -55,7 +55,12 @@ return {
 
   { import = "astrocommunity.search.grug-far-nvim", enabled = true },
   { import = "astrocommunity.search.nvim-hlslens", enabled = true },
-  { import = "astrocommunity.search.nvim-spectre", enabled = true },
+  {
+    import = "astrocommunity.search.nvim-spectre",
+    enabled = true,
+    -- On macos the spectre on edit creates a new file, following doesn't work though
+    opts = { replace_engine = { ["sed"] = { cmd = "sed", args = { "-i", "", "-E" } } } },
+  },
 
   { import = "astrocommunity.git.gitgraph-nvim", enabled = true },
   { import = "astrocommunity.git.openingh-nvim", enabled = true },
@@ -71,7 +76,7 @@ return {
   { import = "astrocommunity.editing-support.neogen" },
   -- import/override with your plugins folder
 
-  { import = "astrocommunity.code-runner.molten-nvim" },
+  -- { import = "astrocommunity.code-runner.molten-nvim" },
 
   -- terminal integration
   { import = "astrocommunity.terminal-integration.flatten-nvim" },
@@ -80,4 +85,12 @@ return {
     import = "astrocommunity.terminal-integration.vim-tpipeline",
     enabled = true,
   },
+
+  -- color schemes
+  { import = "astrocommunity.colorscheme.dracula-nvim", lazy = false },
+
+  -- for notetaking
+  { import = "astrocommunity.note-taking.obsidian-nvim", lazy = true },
 }
+
+-- yellow world
