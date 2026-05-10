@@ -1,6 +1,5 @@
-if true then return {} end -- WARN: REMOVE THIS LINE TO ACTIVATE THIS FILE
-
--- Customize Treesitter
+-- v6: AstroNvim already pins nvim-treesitter to `main` branch
+-- and auto-installs parsers as needed. Just add user extras.
 
 ---@type LazySpec
 return {
@@ -9,7 +8,6 @@ return {
     ensure_installed = {
       "lua",
       "vim",
-      -- add more arguments for adding more treesitter parsers
     },
   },
 }

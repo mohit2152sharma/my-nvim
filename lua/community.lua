@@ -5,24 +5,23 @@
 ---@type LazySpec
 return {
   "AstroNvim/astrocommunity",
-  { import = "astrocommunity.pack.lua", enable = true },
+  { import = "astrocommunity.pack.lua", enabled = true },
   -- { import = "astrocommunity.completion.codeium-nvim", enabled = true },
   -- { import = "astrocommunity.pack.python" },
   { import = "astrocommunity.pack.svelte", enabled = true },
-  { import = "astrocommunity.pack.terraform", enable = true },
-  { import = "astrocommunity.pack.yaml", enable = true },
+  { import = "astrocommunity.pack.terraform", enabled = true },
+  { import = "astrocommunity.pack.yaml", enabled = true },
   --NOTE: Not loading the pack because it doesn't include svelte type in formatter
   -- { import = "astrocommunity.pack.typescript", enabled = true },
-  { import = "astrocommunity.pack.sql", enable = true },
-  { import = "astrocommunity.pack.markdown", enable = true },
-  { import = "astrocommunity.pack.markdown", enable = true },
-  { import = "astrocommunity.pack.bash", enable = true },
-  { import = "astrocommunity.pack.docker", enable = true },
-  { import = "astrocommunity.pack.helm", enable = true },
+  { import = "astrocommunity.pack.sql", enabled = true },
+  { import = "astrocommunity.pack.markdown", enabled = true },
+  { import = "astrocommunity.pack.bash", enabled = true },
+  { import = "astrocommunity.pack.docker", enabled = true },
+  { import = "astrocommunity.pack.helm", enabled = true },
 
   -- { import = "astrocommunity.debugging.nvim-chainsaw", enabled = true },
   { import = "astrocommunity.debugging.nvim-dap-repl-highlights", enabled = true },
-  { import = "astrocommunity.debugging.telescope-dap-nvim", enabled = true },
+  { import = "astrocommunity.debugging.telescope-dap-nvim", enabled = false },
   -- { import = "astrocommunity.editing.auto-save-nvim", enabled = true },
 
   { import = "astrocommunity.register.nvim-neoclip-lua", enabled = true },
@@ -32,13 +31,13 @@ return {
   { import = "astrocommunity.test.nvim-coverage", enabled = true },
 
   { import = "astrocommunity.file-explorer.oil-nvim", enabled = true },
-  { import = "astrocommunity.file-explorer.telescope-file-browser-nvim", enabled = true },
+  { import = "astrocommunity.file-explorer.telescope-file-browser-nvim", enabled = false },
 
-  { import = "astrocommunity.motion.before-nvim", enabled = true },
+  { import = "astrocommunity.motion.before-nvim", enabled = false },
   { import = "astrocommunity.motion.nvim-spider", enabled = true },
   { import = "astrocommunity.motion.nvim-surround", enabled = true },
   { import = "astrocommunity.motion.nvim-tree-pairs", enabled = true },
-  { import = "astrocommunity.motion.portal-nvim", enabled = true },
+  { import = "astrocommunity.motion.portal-nvim", enabled = false },
   -- NOTE: tabout is disabled. Unable to indent in python because of this
   -- { import = "astrocommunity.motion.tabout-nvim", enabled = true },
   { import = "astrocommunity.motion.vim-matchup", enabled = true },
@@ -46,8 +45,8 @@ return {
 
   -- { import = "astrocommunity.markdown-and-latex.markview-nvim" },
 
-  { import = "astrocommunity.indent.indent-rainbowline", enabled = true },
-  { import = "astrocommunity.indent.indent-tools-nvim", enabled = true },
+  { import = "astrocommunity.indent.indent-rainbowline", enabled = false },
+  { import = "astrocommunity.indent.indent-tools-nvim", enabled = false },
 
   { import = "astrocommunity.syntax.hlargs-nvim", enabled = true },
   { import = "astrocommunity.syntax.vim-cool", enabled = true },
@@ -55,12 +54,8 @@ return {
 
   { import = "astrocommunity.search.grug-far-nvim", enabled = true },
   { import = "astrocommunity.search.nvim-hlslens", enabled = true },
-  {
-    import = "astrocommunity.search.nvim-spectre",
-    enabled = true,
-    -- On macos the spectre on edit creates a new file, following doesn't work though
-    opts = { replace_engine = { ["sed"] = { cmd = "sed", args = { "-i", "", "-E" } } } },
-  },
+  -- nvim-spectre disabled (duplicate of grug-far)
+  { import = "astrocommunity.search.nvim-spectre", enabled = false },
 
   { import = "astrocommunity.git.gitgraph-nvim", enabled = true },
   { import = "astrocommunity.git.openingh-nvim", enabled = true },
@@ -72,6 +67,8 @@ return {
   { import = "astrocommunity.editing-support.multiple-cursors-nvim", enabled = true },
   { import = "astrocommunity.editing-support.wildfire-nvim", enabled = true },
   { import = "astrocommunity.editing-support.todo-comments-nvim", enabled = true },
+  { import = "astrocommunity.editing-support.conform-nvim", enabled = true },
+  { import = "astrocommunity.lsp.nvim-lint", enabled = true },
   { import = "astrocommunity.docker.lazydocker" },
   { import = "astrocommunity.editing-support.neogen" },
   -- import/override with your plugins folder
@@ -91,6 +88,23 @@ return {
 
   -- for notetaking
   { import = "astrocommunity.note-taking.obsidian-nvim", lazy = true },
+
+  -- ai agent
+  { import = "astrocommunity.ai.avante-nvim", lazy = true, enabled = false },
+
+  -- productivity additions
+  { import = "astrocommunity.motion.harpoon" },
+  { import = "astrocommunity.motion.mini-ai" },
+  { import = "astrocommunity.lsp.inc-rename-nvim" },
+  { import = "astrocommunity.lsp.garbage-day-nvim" },
+  { import = "astrocommunity.editing-support.dial-nvim" },
+  { import = "astrocommunity.editing-support.bigfile-nvim" },
+  { import = "astrocommunity.diagnostics.tiny-inline-diagnostic-nvim" },
+  { import = "astrocommunity.markdown-and-latex.render-markdown-nvim" },
+  -- language packs
+  { import = "astrocommunity.pack.python" },
+  { import = "astrocommunity.pack.json" },
+  -- { import = "astrocommunity.pack.typescript" },  -- v6 conform may handle svelte now; enable if you want
 }
 
 -- yellow world
