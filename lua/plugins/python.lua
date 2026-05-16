@@ -1,17 +1,29 @@
--- Auto-activate ./.venv (uv default) on neovim startup.
--- Single source of truth: once $VIRTUAL_ENV and $PATH are set,
--- basedpyright, neotest, nvim-dap-python, and :terminal all pick it up.
-vim.api.nvim_create_autocmd("VimEnter", {
-  callback = function()
-    local cwd = vim.fn.getcwd()
-    local venv = cwd .. "/.venv"
-    if vim.fn.isdirectory(venv) == 1 then
-      vim.env.VIRTUAL_ENV = venv
-      vim.env.PATH = venv .. "/bin:" .. vim.env.PATH
-    end
-  end,
-  desc = "Auto-activate ./.venv on startup",
-})
+-- Find nearest .venv walking up from cwd (uv monorepos keep one at workspace root).
+local function find_venv()
+  local found = vim.fs.find(".venv", {
+    upward = true,
+    type = "directory",
+    path = vim.fn.getcwd(),
+    stop = vim.loop.os_homedir(),
+  })
+  return found[1]
+end
+
+local function venv_python()
+  local venv = find_venv()
+  if venv then
+    local p = venv .. (vim.fn.has "win32" == 1 and "/Scripts/python.exe" or "/bin/python")
+    if vim.fn.executable(p) == 1 then return p end
+  end
+  return vim.fn.exepath "python"
+end
+
+-- Activate venv at file-load time (before LSP/DAP read PATH). Cwd is already final here.
+local _venv = find_venv()
+if _venv then
+  vim.env.VIRTUAL_ENV = _venv
+  vim.env.PATH = _venv .. "/bin:" .. vim.env.PATH
+end
 
 -- Locate an editor-managed debugpy installation (never from the project).
 -- Priority: 1) uv tool install debugpy, 2) Mason's debugpy package.
@@ -59,7 +71,7 @@ return {
           before_init = function(_, c)
             if not c.settings then c.settings = {} end
             if not c.settings.python then c.settings.python = {} end
-            c.settings.python.pythonPath = vim.fn.exepath "python"
+            c.settings.python.pythonPath = venv_python()
           end,
           settings = {
             basedpyright = {
@@ -168,11 +180,7 @@ return {
         ft = "python",
         config = function()
           local dap = require "dap"
-          local project_python = vim.fn.getcwd() .. "/.venv/bin/python"
-          if vim.fn.has "win32" == 1 then project_python = vim.fn.getcwd() .. "/.venv/Scripts/python.exe" end
-
-          -- Fall back to whatever python is on PATH if project venv missing
-          if vim.fn.executable(project_python) ~= 1 then project_python = vim.fn.exepath "python" end
+          local project_python = venv_python()
 
           local debugpy_path = find_debugpy_path()
           if not debugpy_path then
@@ -304,7 +312,7 @@ return {
       table.insert(
         opts.adapters,
         require "neotest-python" {
-          python = vim.fn.getcwd() .. "/.venv/bin/python",
+          python = venv_python(),
           runner = "pytest",
           dap = { justMyCode = false },
         }
