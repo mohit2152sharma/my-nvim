@@ -1,3 +1,44 @@
+-- Auto-activate ./.venv (uv default) on neovim startup.
+-- Single source of truth: once $VIRTUAL_ENV and $PATH are set,
+-- basedpyright, neotest, nvim-dap-python, and :terminal all pick it up.
+vim.api.nvim_create_autocmd("VimEnter", {
+  callback = function()
+    local cwd = vim.fn.getcwd()
+    local venv = cwd .. "/.venv"
+    if vim.fn.isdirectory(venv) == 1 then
+      vim.env.VIRTUAL_ENV = venv
+      vim.env.PATH = venv .. "/bin:" .. vim.env.PATH
+    end
+  end,
+  desc = "Auto-activate ./.venv on startup",
+})
+
+-- Locate an editor-managed debugpy installation (never from the project).
+-- Priority: 1) uv tool install debugpy, 2) Mason's debugpy package.
+-- Returns the path to the directory containing the `debugpy` package,
+-- which we'll inject via PYTHONPATH so the project venv's python can find it.
+local function find_debugpy_path()
+  -- Option A: uv tool install debugpy
+  local uv_tool = vim.fn.expand "~/.local/share/uv/tools/debugpy/lib"
+  if vim.fn.isdirectory(uv_tool) == 1 then
+    -- The actual package lives in lib/python3.X/site-packages
+    local matches = vim.fn.glob(uv_tool .. "/python*/site-packages", false, true)
+    if #matches > 0 then return matches[1] end
+  end
+
+  -- Option B: Mason's debugpy
+  local ok, registry = pcall(require, "mason-registry")
+  if ok and registry.is_installed "debugpy" then
+    local install = vim.fn.expand "$MASON/packages/debugpy"
+    local matches = vim.fn.glob(install .. "/venv/lib/python*/site-packages", false, true)
+    if #matches > 0 then return matches[1] end
+    matches = vim.fn.glob(install .. "/venv/Lib/site-packages", false, true)
+    if #matches > 0 then return matches[1] end
+  end
+
+  return nil
+end
+
 return {
   {
     "AstroNvim/astrolsp",
@@ -6,7 +47,11 @@ return {
     opts = {
       formatting = {
         format_on_save = false,
-        -- formatting_options = {},
+      },
+      -- Disable redundant Python type checkers; keep basedpyright + ruff only.
+      handlers = {
+        pyrefly = false,
+        ty = false,
       },
       ---@diagnostic disable: missing-fields
       config = {
@@ -21,6 +66,8 @@ return {
               analysis = {
                 typeCheckingMode = "basic",
                 autoImportCompletions = true,
+                diagnosticMode = "openFilesOnly",
+                useLibraryCodeForTypes = true,
                 diagnosticSeverityOverrides = {
                   reportUnusedImport = "information",
                   reportUnusedFunction = "information",
@@ -59,15 +106,17 @@ return {
     opts = function(_, opts)
       opts.ensure_installed = require("astrocore").list_insert_unique(opts.ensure_installed, { "python" })
       if not opts.handlers then opts.handlers = {} end
-      opts.handlers.python = function() end -- make sure python doesn't get set up by mason-nvim-dap, it's being set up by nvim-dap-python
+      opts.handlers.python = function() end -- nvim-dap-python handles this
     end,
   },
   {
     "WhoIsSethDaniel/mason-tool-installer.nvim",
     optional = true,
     opts = function(_, opts)
+      -- debugpy still listed here as a Mason-managed install (fallback).
+      -- If you prefer the uv tool approach, you can remove "debugpy" from here.
       opts.ensure_installed =
-        require("astrocore").list_insert_unique(opts.ensure_installed, { "basedpyright", "black", "isort", "debugpy" })
+        require("astrocore").list_insert_unique(opts.ensure_installed, { "basedpyright", "ruff", "debugpy" })
     end,
   },
   {
@@ -81,7 +130,7 @@ return {
         opts = {
           mappings = {
             n = {
-              ["<Leader>lv"] = { "<Cmd>VenvSelect<CR>", desc = "Select VirtualEnv" },
+              ["<Leader>lv"] = { "<Cmd>VenvSelect<CR>", desc = "Select VirtualEnv (manual override)" },
             },
           },
         },
@@ -90,57 +139,194 @@ return {
     opts = {},
     cmd = "VenvSelect",
   },
+
+  -- ============================================================
+  -- DEBUGGING (DAP)
+  -- ============================================================
   {
     "mfussenegger/nvim-dap",
     optional = true,
+    dependencies = {
+      {
+        "rcarriga/nvim-dap-ui",
+        dependencies = { "nvim-neotest/nvim-nio" },
+        config = function()
+          local dap, dapui = require "dap", require "dapui"
+          dapui.setup()
+          dap.listeners.before.attach.dapui_config = function() dapui.open() end
+          dap.listeners.before.launch.dapui_config = function() dapui.open() end
+          dap.listeners.before.event_terminated.dapui_config = function() dapui.close() end
+          dap.listeners.before.event_exited.dapui_config = function() dapui.close() end
+        end,
+      },
+      { "theHamsta/nvim-dap-virtual-text", opts = {} },
+    },
     specs = {
       {
         "mfussenegger/nvim-dap-python",
         dependencies = "mfussenegger/nvim-dap",
-        ft = "python", -- NOTE: ft: lazy-load on filetype
-        config = function(_, opts)
-          local path = vim.fn.exepath "python"
-          local debugpy = require("mason-registry").get_package "debugpy"
-          if debugpy:is_installed() then
-            path = debugpy:get_install_path()
-            if vim.fn.has "win32" == 1 then
-              path = path .. "/venv/Scripts/python"
-            else
-              path = path .. "/venv/bin/python"
-            end
+        ft = "python",
+        config = function()
+          local dap = require "dap"
+          local project_python = vim.fn.getcwd() .. "/.venv/bin/python"
+          if vim.fn.has "win32" == 1 then project_python = vim.fn.getcwd() .. "/.venv/Scripts/python.exe" end
+
+          -- Fall back to whatever python is on PATH if project venv missing
+          if vim.fn.executable(project_python) ~= 1 then project_python = vim.fn.exepath "python" end
+
+          local debugpy_path = find_debugpy_path()
+          if not debugpy_path then
+            vim.notify(
+              "debugpy not found. Install via `uv tool install debugpy` or `:MasonInstall debugpy`",
+              vim.log.levels.WARN
+            )
           end
-          require("dap-python").setup(path, opts)
+
+          -- Custom adapter: run project venv's python, but inject debugpy via PYTHONPATH
+          -- so it's never installed in the project itself.
+          dap.adapters.python = function(callback, config)
+            local env = vim.fn.environ()
+            if debugpy_path then env.PYTHONPATH = debugpy_path .. (env.PYTHONPATH and (":" .. env.PYTHONPATH) or "") end
+            local python = config.pythonPath or project_python
+            callback {
+              type = "executable",
+              command = python,
+              args = { "-m", "debugpy.adapter" },
+              options = { env = env },
+            }
+          end
+
+          -- Configurations
+          dap.configurations.python = {
+            {
+              type = "python",
+              request = "launch",
+              name = "Launch current file (project venv)",
+              program = "${file}",
+              pythonPath = project_python,
+              justMyCode = false,
+              console = "integratedTerminal",
+            },
+            {
+              type = "python",
+              request = "launch",
+              name = "Launch module (-m)",
+              module = function() return vim.fn.input "Module name: " end,
+              pythonPath = project_python,
+              justMyCode = false,
+              console = "integratedTerminal",
+            },
+            {
+              type = "python",
+              request = "launch",
+              name = "Pytest: current file",
+              module = "pytest",
+              args = { "${file}", "-v" },
+              pythonPath = project_python,
+              justMyCode = false,
+              console = "integratedTerminal",
+            },
+            {
+              type = "python",
+              request = "attach",
+              name = "Attach to running process",
+              connect = {
+                host = "127.0.0.1",
+                port = function() return tonumber(vim.fn.input "Port: ") end,
+              },
+              justMyCode = false,
+            },
+          }
+
+          -- Wire up dap-python helper functions (test_method, test_class, etc.)
+          -- using the project venv's python so they pick up your test dependencies.
+          require("dap-python").setup(project_python)
         end,
       },
     },
   },
+
+  -- ============================================================
+  -- DAP KEYMAPS
+  -- ============================================================
+  {
+    "AstroNvim/astrocore",
+    opts = {
+      mappings = {
+        n = {
+          ["<F5>"] = { function() require("dap").continue() end, desc = "Debug: Start/Continue" },
+          ["<F10>"] = { function() require("dap").step_over() end, desc = "Debug: Step Over" },
+          ["<F11>"] = { function() require("dap").step_into() end, desc = "Debug: Step Into" },
+          ["<F12>"] = { function() require("dap").step_out() end, desc = "Debug: Step Out" },
+          ["<S-F5>"] = { function() require("dap").terminate() end, desc = "Debug: Stop" },
+
+          ["<Leader>db"] = { function() require("dap").toggle_breakpoint() end, desc = "Toggle breakpoint" },
+          ["<Leader>dB"] = {
+            function() require("dap").set_breakpoint(vim.fn.input "Condition: ") end,
+            desc = "Conditional breakpoint",
+          },
+          ["<Leader>dc"] = { function() require("dap").continue() end, desc = "Continue" },
+          ["<Leader>dC"] = { function() require("dap").run_to_cursor() end, desc = "Run to cursor" },
+          ["<Leader>do"] = { function() require("dap").step_over() end, desc = "Step over" },
+          ["<Leader>di"] = { function() require("dap").step_into() end, desc = "Step into" },
+          ["<Leader>dO"] = { function() require("dap").step_out() end, desc = "Step out" },
+          ["<Leader>dr"] = { function() require("dap").repl.toggle() end, desc = "Toggle REPL" },
+          ["<Leader>dl"] = { function() require("dap").run_last() end, desc = "Run last" },
+          ["<Leader>du"] = { function() require("dapui").toggle() end, desc = "Toggle DAP UI" },
+          ["<Leader>dt"] = { function() require("dap").terminate() end, desc = "Terminate" },
+          ["<Leader>dh"] = { function() require("dap.ui.widgets").hover() end, desc = "Hover variable" },
+
+          ["<Leader>dn"] = {
+            function() require("dap-python").test_method() end,
+            desc = "Debug Python test (method)",
+          },
+          ["<Leader>df"] = {
+            function() require("dap-python").test_class() end,
+            desc = "Debug Python test (class)",
+          },
+        },
+        v = {
+          ["<Leader>ds"] = { function() require("dap-python").debug_selection() end, desc = "Debug selection" },
+        },
+      },
+    },
+  },
+
+  -- ============================================================
+  -- TESTING
+  -- ============================================================
   {
     "nvim-neotest/neotest",
     optional = true,
     dependencies = { "nvim-neotest/neotest-python", config = function() end },
     opts = function(_, opts)
       if not opts.adapters then opts.adapters = {} end
-      table.insert(opts.adapters, require "neotest-python"(require("astrocore").plugin_opts "neotest-python"))
+      table.insert(
+        opts.adapters,
+        require "neotest-python" {
+          python = vim.fn.getcwd() .. "/.venv/bin/python",
+          runner = "pytest",
+          dap = { justMyCode = false },
+        }
+      )
     end,
   },
+
+  -- ============================================================
+  -- FORMATTING
+  -- ============================================================
   {
     "stevearc/conform.nvim",
     event = { "BufWritePre", "BufRead" },
     optional = false,
     cmd = { "Conform" },
     opts = {
-      format_on_save = true,
-      -- default_format_opts = { lsp_format = "fallback" },
-      formatters_by_ft = {
-        python = { "isort", "black", "autoflake" },
+      format_on_save = {
+        lsp_format = "fallback",
+        timeout_ms = 3000,
       },
-      formatters = {
-        isort = {
-          prepend_args = { "--profile", "black" },
-        },
-        autoflake = {
-          prepent_args = { "--remove-all-unused-imports", "--in-place", "--ignore-init-module-imports" },
-        },
+      formatters_by_ft = {
+        python = { "ruff_organize_imports", "ruff_format" },
       },
     },
   },
